@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import codecs
 import re
+import urllib
 
 from .common import InfoExtractor
 from ..utils import (
@@ -68,6 +69,15 @@ class CDAIE(InfoExtractor):
         'url': 'http://ebd.cda.pl/0x0/5749950c',
         'only_matching': True,
     }]
+
+    def _cda_url_decoder(self,a):
+        a = urllib.parse.unquote(a)
+        b = [
+            chr( 33 + (f + 14) % 94 if ( 33 <= f and 126 >= f ) else f) for f
+            in [ord(l) for l in a.replace("_XDDD", "")]
+        ]
+        url = "".join(b).replace(".cda.mp4", "").replace(".2cda.pl", ".cda.pl").replace(".3cda.pl", ".cda.pl")
+        return  "https://" +  url + ".mp4"
 
     def _download_age_confirm_page(self, url, video_id, *args, **kwargs):
         form_data = random_birthday('rok', 'miesiac', 'dzien')
@@ -141,6 +151,8 @@ class CDAIE(InfoExtractor):
                 video['file'] = codecs.decode(video['file'], 'rot_13')
                 if video['file'].endswith('adc.mp4'):
                     video['file'] = video['file'].replace('adc.mp4', '.mp4')
+            if video['file'].endswith('_XDDD'):
+                video['file'] = self._cda_url_decoder(video['file'])
             f = {
                 'url': video['file'],
             }
@@ -178,5 +190,4 @@ class CDAIE(InfoExtractor):
             extract_format(webpage, resolution)
 
         self._sort_formats(formats)
-
         return info_dict
